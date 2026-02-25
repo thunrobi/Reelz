@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REELZ — Find Your Next Film</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Instrument+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0804;
+      --surface: #111009;
+      --card: #171410;
+      --border: #2a2520;
+      --accent: #e8c87a;
+      --accent2: #c0392b;
+      --text: #f2ead8;
+      --muted: #7a6e5e;
+      --serif: 'Playfair Display', serif;
+      --sans: 'Instrument Sans', sans-serif;
+      --mono: 'DM Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Film grain */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.6;
+      mix-blend-mode: overlay;
+    }
+
+    /* Hero header */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 60px;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, transparent, var(--accent));
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .hero-title {
+      font-family: var(--serif);
+      font-size: clamp(3.5rem, 10vw, 7rem);
+      font-weight: 900;
+      line-height: 0.9;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 0.95rem;
+      color: var(--muted);
+      font-weight: 300;
+      letter-spacing: 0.02em;
+    }
+
+    /* Quiz container */
+    .quiz-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 60px 24px;
+    }
+
+    /* Step indicator */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 48px;
+      position: relative;
+    }
+
+    .step-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--muted);
+      transition: all 0.3s;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-dot.active { border-color: var(--accent); color: var(--accent); background: rgba(232,200,122,0.08); }
+    .step-dot.done { border-color: var(--accent); background: var(--accent); color: #000; }
+
+    .step-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+
+    .step-line.done { background: var(--accent); }
+
+    /* Question card */
+    .question-card {
+      animation: fadeUp 0.4s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .question-num {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .question-text {
+      font-family: var(--serif);
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 32px;
+    }
+
+    /* Option grid */
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .option-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 0.9rem;
+      font-weight: 400;
+      padding: 18px 20px;
+      border-radius: 3px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s;
+      line-height: 1.4;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .option-btn::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--accent);
+      transform: scaleY(0);
+      transition: transform 0.2s;
+    }
+
+    .option-btn:hover {
+      border-color: var(--accent);
+      background: rgba(232,200,122,0.05);
+    }
+
+    .option-btn:hover::before { transform: scaleY(1); }
+
+    .option-btn.selected {
+      border-color: var(--accent);
+      background: rgba(232,200,122,0.08);
+      color: var(--accent);
+    }
+
+    .option-btn.selected::before { transform: scaleY(1); }
+
+    .option-emoji {
+      display: block;
+      font-size: 1.4rem;
+      margin-bottom: 6px;
+    }
+
+    /* Nav buttons */
+    .nav-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 32px;
+    }
+
+    .btn-back {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-back:hover { border-color: var(--muted); color: var(--text); }
+
+    .btn-next {
+      background: var(--accent);
+      border: none;
+      color: #000;
+      font-family: var(--serif);
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-style: italic;
+      padding: 12px 32px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .btn-next.enabled {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .btn-next.enabled:hover {
+      background: #f0d48e;
+      transform: translateY(-1px);
+    }
+
+    /* Loading state */
+    .loading-screen {
+      display: none;
+      text-align: center;
+      padding: 80px 24px;
+      animation: fadeUp 0.4s ease;
+    }
+
+    .film-strip {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 32px;
+    }
+
+    .film-frame {
+      width: 14px;
+      height: 20px;
+      background: var(--border);
+      border-radius: 1px;
+      animation: filmPulse 1.2s ease-in-out infinite;
+    }
+
+    .film-frame:nth-child(2) { animation-delay: 0.15s; }
+    .film-frame:nth-child(3) { animation-delay: 0.3s; }
+    .film-frame:nth-child(4) { animation-delay: 0.45s; }
+    .film-frame:nth-child(5) { animation-delay: 0.6s; }
+
+    @keyframes filmPulse {
+      0%, 100% { background: var(--border); }
+      50% { background: var(--accent); }
+    }
+
+    .loading-text {
+      font-family: var(--serif);
+      font-size: 1.4rem;
+      font-style: italic;
+      color: var(--muted);
+    }
+
+    /* Results */
+    .results-screen {
+      display: none;
+      animation: fadeUp 0.5s ease;
+    }
+
+    .results-header {
+      text-align: center;
+      padding: 0 0 48px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .results-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .results-title {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    /* Movie cards */
+    .movies-list { display: flex; flex-direction: column; gap: 24px; }
+
+    .movie-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 28px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 24px;
+      align-items: start;
+      transition: border-color 0.2s;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .movie-card:nth-child(1) { animation-delay: 0.1s; }
+    .movie-card:nth-child(2) { animation-delay: 0.2s; }
+    .movie-card:nth-child(3) { animation-delay: 0.3s; }
+    .movie-card:nth-child(4) { animation-delay: 0.4s; }
+    .movie-card:nth-child(5) { animation-delay: 0.5s; }
+
+    .movie-card:hover { border-color: var(--accent); }
+
+    .movie-rank {
+      font-family: var(--serif);
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--border);
+      line-height: 1;
+      width: 48px;
+      text-align: right;
+      padding-top: 4px;
+    }
+
+    .movie-title {
+      font-family: var(--serif);
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+
+    .movie-meta {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .movie-reason {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.6;
+      font-weight: 300;
+    }
+
+    .movie-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .tag {
+      background: rgba(232,200,122,0.08);
+      border: 1px solid rgba(232,200,122,0.2);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      border-radius: 1px;
+      text-transform: uppercase;
+    }
+
+    /* Try again */
+    .try-again-wrap {
+      text-align: center;
+      padding: 48px 0 0;
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+    }
+
+    .btn-restart {
+      background: none;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: var(--serif);
+      font-size: 1rem;
+      font-style: italic;
+      font-weight: 700;
+      padding: 14px 36px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-restart:hover {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .error-msg {
+      background: rgba(192,57,43,0.1);
+      border: 1px solid rgba(192,57,43,0.3);
+      color: #e07060;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      padding: 14px 18px;
+      border-radius: 3px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 500px) {
+      .options-grid { grid-template-columns: 1fr; }
+      .movie-card { grid-template-columns: 1fr; }
+      .movie-rank { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">AI-Powered Film Finder</div>
+  <h1 class="hero-title">REEL<em>Z</em></h1>
+  <p class="hero-sub">Answer a few questions. Get your perfect film.</p>
+</div>
+
+<div class="quiz-wrap">
+
+  <!-- Quiz screen -->
+  <div id="quizScreen">
+    <!-- Step indicator -->
+    <div class="step-indicator" id="stepIndicator"></div>
+
+    <!-- Question -->
+    <div class="question-card" id="questionCard">
+      <div class="question-num" id="questionNum"></div>
+      <div class="question-text" id="questionText"></div>
+      <div class="options-grid" id="optionsGrid"></div>
+      <div class="nav-row">
+        <button class="btn-back" id="btnBack" onclick="prevQuestion()">← Back</button>
+        <button class="btn-next" id="btnNext" onclick="nextQuestion()">Continue →</button>
+      </div>
+      <div class="error-msg" id="errorMsg">Something went wrong. Please try again.</div>
+    </div>
+  </div>
+
+  <!-- Loading screen -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="film-strip">
+      <div class="film-frame"></div>
+      <div class="film-frame"></div>
+      <div class="film-frame"></div>
+      <div class="film-frame"></div>
+      <div class="film-frame"></div>
+    </div>
+    <div class="loading-text">Finding your films…</div>
+  </div>
+
+  <!-- Results screen -->
+  <div class="results-screen" id="resultsScreen">
+    <div class="results-header">
+      <div class="results-eyebrow">Your Picks Are In</div>
+      <div class="results-title">Tonight's Watchlist</div>
+    </div>
+    <div class="movies-list" id="moviesList"></div>
+    <div class="try-again-wrap">
+      <button class="btn-restart" onclick="restart()">Start Over</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>REELZ &mdash; AI-Assisted Film Discovery &mdash; Built by Robin Thun</footer>
+
+<script>
+  const questions = [
+    {
+      text: "What kind of mood are you in tonight?",
+      options: [
+        { emoji: "😂", label: "Laugh out loud", value: "I want to laugh and have fun" },
+        { emoji: "😢", label: "Feel something deep", value: "I want an emotional, moving experience" },
+        { emoji: "😱", label: "On the edge of my seat", value: "I want tension, thrills, and suspense" },
+        { emoji: "🤔", label: "Make me think", value: "I want something thought-provoking and cerebral" }
+      ]
+    },
+    {
+      text: "How much mental energy do you have right now?",
+      options: [
+        { emoji: "🧠", label: "Full power — give me depth", value: "high energy, complex narrative" },
+        { emoji: "☕", label: "Moderate — something engaging", value: "moderate engagement, good story" },
+        { emoji: "🛋️", label: "Low — easy watching", value: "low effort, easy to follow" },
+        { emoji: "😴", label: "Almost none — background vibes", value: "very light, background-friendly" }
+      ]
+    },
+    {
+      text: "Pick a setting that appeals to you right now.",
+      options: [
+        { emoji: "🌆", label: "Gritty city streets", value: "urban, city setting" },
+        { emoji: "🌌", label: "Another world or galaxy", value: "sci-fi or fantasy world" },
+        { emoji: "🏡", label: "Everyday life, real world", value: "grounded, realistic setting" },
+        { emoji: "🕰️", label: "History or period drama", value: "historical setting" }
+      ]
+    },
+    {
+      text: "How do you feel about a dark or sad ending?",
+      options: [
+        { emoji: "🌈", label: "Happy ending please", value: "happy, uplifting ending" },
+        { emoji: "🎭", label: "Bittersweet is fine", value: "bittersweet or ambiguous ending" },
+        { emoji: "🖤", label: "Dark endings hit different", value: "dark or tragic ending is fine" },
+        { emoji: "🎲", label: "Surprise me", value: "any kind of ending" }
+      ]
+    },
+    {
+      text: "Solo watch or with someone?",
+      options: [
+        { emoji: "🧍", label: "Just me", value: "watching alone" },
+        { emoji: "👫", label: "Date night", value: "watching with a partner, date-friendly" },
+        { emoji: "👨‍👩‍👧", label: "Family or group", value: "watching with family or a group" },
+        { emoji: "🍕", label: "Friends and snacks", value: "watching with friends, fun group vibe" }
+      ]
+    }
+  ];
+
+  let current = 0;
+  let answers = [];
+  let selected = null;
+
+  function buildStepIndicator() {
+    const el = document.getElementById('stepIndicator');
+    el.innerHTML = '';
+    questions.forEach((_, i) => {
+      if (i > 0) {
+        const line = document.createElement('div');
+        line.className = 'step-line' + (i <= current ? ' done' : '');
+        el.appendChild(line);
+      }
+      const dot = document.createElement('div');
+      dot.className = 'step-dot' + (i === current ? ' active' : i < current ? ' done' : '');
+      dot.textContent = i < current ? '✓' : i + 1;
+      el.appendChild(dot);
+    });
+  }
+
+  function renderQuestion() {
+    selected = answers[current] || null;
+    const q = questions[current];
+
+    document.getElementById('questionNum').textContent = `Question ${current + 1} of ${questions.length}`;
+    document.getElementById('questionText').textContent = q.text;
+    document.getElementById('btnBack').style.visibility = current === 0 ? 'hidden' : 'visible';
+
+    const grid = document.getElementById('optionsGrid');
+    grid.innerHTML = q.options.map((opt, i) => `
+      <button class="option-btn ${selected === opt.value ? 'selected' : ''}"
+              onclick="selectOption('${opt.value.replace(/'/g, "\\'")}', this)">
+        <span class="option-emoji">${opt.emoji}</span>
+        ${opt.label}
+      </button>
+    `).join('');
+
+    updateNextBtn();
+    buildStepIndicator();
+
+    // Re-animate card
+    const card = document.getElementById('questionCard');
+    card.style.animation = 'none';
+    card.offsetHeight;
+    card.style.animation = 'fadeUp 0.4s ease';
+  }
+
+  function selectOption(value, btn) {
+    selected = value;
+    document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    updateNextBtn();
+  }
+
+  function updateNextBtn() {
+    const btn = document.getElementById('btnNext');
+    if (selected) {
+      btn.classList.add('enabled');
+      btn.textContent = current === questions.length - 1 ? 'Find My Films →' : 'Continue →';
+    } else {
+      btn.classList.remove('enabled');
+    }
+  }
+
+  function nextQuestion() {
+    if (!selected) return;
+    answers[current] = selected;
+    if (current < questions.length - 1) {
+      current++;
+      renderQuestion();
+    } else {
+      getRecommendations();
+    }
+  }
+
+  function prevQuestion() {
+    if (current > 0) {
+      answers[current] = selected;
+      current--;
+      renderQuestion();
+    }
+  }
+
+  async function getRecommendations() {
+    document.getElementById('quizScreen').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'block';
+    document.getElementById('errorMsg').style.display = 'none';
+
+    const prompt = `You are a film recommendation expert. Based on these viewer preferences, suggest exactly 5 movies.
+
+Preferences:
+- Mood: ${answers[0]}
+- Energy level: ${answers[1]}
+- Preferred setting: ${answers[2]}
+- Ending preference: ${answers[3]}
+- Viewing context: ${answers[4]}
+
+Respond ONLY with a valid JSON array. No preamble, no markdown, no backticks. Just raw JSON.
+
+Format:
+[
+  {
+    "title": "Movie Title",
+    "year": 1994,
+    "genre": "Drama / Crime",
+    "reason": "One sentence explaining why this matches their preferences.",
+    "tags": ["tag1", "tag2", "tag3"]
+  }
+]
+
+Make the recommendations diverse, specific, and genuinely tailored to the preferences. Include a mix of well-known and hidden gems.`;
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+      const text = data.content.map(b => b.text || '').join('').trim().replace(/```json|```/g, '').trim();
+      const movies = JSON.parse(text);
+
+      showResults(movies);
+    } catch (err) {
+      document.getElementById('loadingScreen').style.display = 'none';
+      document.getElementById('quizScreen').style.display = 'block';
+      document.getElementById('errorMsg').style.display = 'block';
+      console.error(err);
+    }
+  }
+
+  function showResults(movies) {
+    document.getElementById('loadingScreen').style.display = 'none';
+    const resultsScreen = document.getElementById('resultsScreen');
+    resultsScreen.style.display = 'block';
+
+    const list = document.getElementById('moviesList');
+    list.innerHTML = movies.map((m, i) => `
+      <div class="movie-card">
+        <div class="movie-rank">0${i + 1}</div>
+        <div>
+          <div class="movie-title">${m.title}</div>
+          <div class="movie-meta">${m.year} &nbsp;·&nbsp; ${m.genre}</div>
+          <div class="movie-reason">${m.reason}</div>
+          <div class="movie-tags">
+            ${(m.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function restart() {
+    current = 0;
+    answers = [];
+    selected = null;
+    document.getElementById('resultsScreen').style.display = 'none';
+    document.getElementById('quizScreen').style.display = 'block';
+    renderQuestion();
+  }
+
+  // Init
+  renderQuestion();
+</script>
+</body>
+</html>
